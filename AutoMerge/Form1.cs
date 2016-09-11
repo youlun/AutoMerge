@@ -159,16 +159,10 @@ namespace AutoMerge
                 mergeParameters.Add(string.Join(" ", parameters));
             }
 
-            foreach (var p in mergeParameters) {
-                Console.WriteLine(@"C:\Users\youlu\AppData\Local\Programs\MKVToolNix\mkvmerge.exe");
-                Console.WriteLine(p.Replace(" --", "\n--"));
-                Console.WriteLine();
-            }
-            return;
-
             Parallel.ForEach(mergeParameters, new ParallelOptions {
                 MaxDegreeOfParallelism = Program.NumaNodes.Count
             }, parameter => {
+                Console.WriteLine(@"C:\Users\youlu\AppData\Local\Programs\MKVToolNix\mkvmerge.exe" + "\n" + parameter.Replace(" --", "\n--") + "\n");
                 StartProcess(@"C:\Users\youlu\AppData\Local\Programs\MKVToolNix\mkvmerge.exe", parameter);
             });
 
