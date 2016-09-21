@@ -7,20 +7,6 @@ using System.Windows.Forms;
 
 namespace AutoMerge
 {
-    class Episode
-    {
-        public string VideoFile { get; set; }
-        public List<string> AudioFiles { get; set; }
-        public string ChapterFile { get; set; }
-        public string MkvFile { get; set; }
-        public List<string> SubtitleFiles { get; set; }
-
-        public Episode()
-        {
-            this.AudioFiles = new List<string>();
-            this.SubtitleFiles = new List<string>();
-        }
-    }
 
     struct NumaNode
     {
