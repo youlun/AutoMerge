@@ -1,0 +1,44 @@
+﻿<Window x:Class="AutoMerge.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:AutoMerge"
+        mc:Ignorable="d"
+        Title="合并" Height="270" Width="450" WindowStartupLocation="CenterScreen" ResizeMode="CanMinimize" Loaded="Window_Loaded">
+    <Grid>
+        <GroupBox Header="输入" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="414">
+            <Grid>
+                <Grid>
+                    <CheckBox x:Name="VideoSourceCheck" Content="视频" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" />
+                    <WrapPanel x:Name="VideoSourcePanel" HorizontalAlignment="Left" Margin="80,10,0,0" VerticalAlignment="Top" Orientation="Horizontal"></WrapPanel>
+                </Grid>
+                <Grid>
+                    <CheckBox x:Name="AudioSourceCheck" Content="音频" HorizontalAlignment="Left" Margin="10,30,0,0" VerticalAlignment="Top" />
+                    <WrapPanel x:Name="AudioSourcePanel" HorizontalAlignment="Left" Margin="80,28,0,0" VerticalAlignment="Top" Orientation="Horizontal"></WrapPanel>
+                </Grid>
+                <Grid>
+                    <CheckBox x:Name="ChapterCheck" Content="章节" HorizontalAlignment="Left" Margin="10,50,0,0" VerticalAlignment="Top" />
+                </Grid>
+                <Grid>
+                    <CheckBox x:Name="SubtitleCheck" Content="字幕" HorizontalAlignment="Left" Margin="10,70,0,0" VerticalAlignment="Top" />
+                    <TextBlock HorizontalAlignment="Left" Margin="80,69,0,0" TextWrapping="Wrap" Text="语言" VerticalAlignment="Top"/>
+                    <TextBox x:Name="SubtitleLanguage" HorizontalAlignment="Left" Margin="109,68,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="30" Text="jpn" Height="20"/>
+                </Grid>
+            </Grid>
+        </GroupBox>
+        <GroupBox Header="输出" HorizontalAlignment="Left" Margin="10,125,0,0" VerticalAlignment="Top" Width="414">
+            <Grid>
+                <Grid>
+                    <TextBlock HorizontalAlignment="Left" Margin="30,10,0,0" TextWrapping="Wrap" Text="格式" VerticalAlignment="Top"/>
+                    <WrapPanel x:Name="OutputPanel" HorizontalAlignment="Left" Margin="80,10,0,0" VerticalAlignment="Top" Orientation="Horizontal"></WrapPanel>
+                </Grid>
+                <Grid>
+                    <TextBlock HorizontalAlignment="Left" Margin="30,30,0,0" TextWrapping="Wrap" Text="FPS" VerticalAlignment="Top"/>
+                    <TextBox x:Name="Fps" HorizontalAlignment="Left" Margin="80,29,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="80" Text="24000/1001" Height="20"/>
+                </Grid>
+            </Grid>
+        </GroupBox>
+        <Button x:Name="Start" Content="开始合并" HorizontalAlignment="Left" Margin="10,201,0,0" VerticalAlignment="Top" Width="414" Height="25" Click="Start_Click"/>
+    </Grid>
+</Window>
