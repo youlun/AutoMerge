@@ -467,7 +467,7 @@ _open:
                 }
 
                 Console.WriteLine($"{mainProcess} {parameter.Item2}\n");
-                //  StartProcess(mainProcess, parameter.Item2);
+                StartProcess(mainProcess, parameter.Item2);
             });
 
             MessageBoxResult mbResult;
