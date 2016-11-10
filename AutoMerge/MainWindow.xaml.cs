@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Threading;
 using Microsoft.Win32;
 
 namespace AutoMerge
@@ -16,35 +18,46 @@ namespace AutoMerge
     /// </summary>
     public partial class MainWindow : Window
     {
-        private Dictionary<VideoSourceType, FileType> VideoSourceFileTypes = new Dictionary<VideoSourceType, FileType>
+        private Dictionary<VideoSourceType, FileType> _videoSourceFileTypes = new Dictionary<VideoSourceType, FileType>
         {
-            { VideoSourceType.Avc, new FileType { FileExtension = ".avc" } },
-            { VideoSourceType.Hevc, new FileType { FileExtension = ".hevc" } }
+            { VideoSourceType.Avc, new FileType { FileExtension = ".264", UIBaseCheckBox = "VideoSourceCheck" } },
+            { VideoSourceType.Hevc, new FileType { FileExtension = ".hevc", UIBaseCheckBox = "VideoSourceCheck" } }
         };
-        private Dictionary<AudioSourceType, FileType> AudioSourceFileTypes = new Dictionary<AudioSourceType, FileType>
+        private Dictionary<AudioSourceType, FileType> _audioSourceFileTypes = new Dictionary<AudioSourceType, FileType>
         {
-            { AudioSourceType.Flac, new FileType { FileExtension = ".flac", UIButtonType = ButtonType.Check } },
-            { AudioSourceType.M4a, new FileType { FileExtension = ".m4a", UIButtonType = ButtonType.Check } },
-            { AudioSourceType.Aac, new FileType { FileExtension = ".aac", UIButtonType = ButtonType.Check } },
-            { AudioSourceType.Ac3, new FileType { FileExtension = ".ac3", UIButtonType = ButtonType.Check } }
+            { AudioSourceType.Flac, new FileType { FileExtension = ".flac", UIButtonType = ButtonType.Check, UIBaseCheckBox = "AudioSourceCheck" } },
+            { AudioSourceType.M4a, new FileType { FileExtension = ".m4a", UIButtonType = ButtonType.Check, UIBaseCheckBox = "AudioSourceCheck" } },
+            { AudioSourceType.Aac, new FileType { FileExtension = ".aac", UIButtonType = ButtonType.Check, UIBaseCheckBox = "AudioSourceCheck" } },
+            { AudioSourceType.Ac3, new FileType { FileExtension = ".ac3", UIButtonType = ButtonType.Check, UIBaseCheckBox = "AudioSourceCheck" } }
         };
-        private Dictionary<OutputType, FileType> OutputFileTypes = new Dictionary<OutputType, FileType>
+        private Dictionary<OutputType, FileType> _outputFileTypes = new Dictionary<OutputType, FileType>
         {
             { OutputType.Mkv, new FileType { FileExtension = ".mkv" } },
-            { OutputType.Mp4, new FileType { FileExtension = ".mp4" } }
+            { OutputType.Mp4, new FileType { FileExtension = ".mp4", NeedEnterFps = true } }
         };
 
         private TextBox AudioLanguage = null;
         private CheckBox UsingAllAudioSourceType = null;
 
-        private string MkvMergeFilePath = null;
-        private string Mp4MuxerFilePath = null;
-
-        private Configuration Config = null;
-        private KeyValueConfigurationCollection Settings = null;
+        private string _mkvMergeFilePath = @"MKVToolNix\mkvmerge.exe";
+        private string _mp4MuxerFilePath = @"bin\mp4muxer.exe";
 
         public MainWindow()
         {
+            int width = 210;
+            int height = 30;
+            bool success = false;
+            while (!success) {
+                try {
+                    Console.SetWindowSize(width, height);
+                    success = true;
+                } catch {
+                    width -= 14;
+                    height -= 2;
+                }
+            }
+            Console.WriteLine("这里是日志，不能关，可以最小化");
+
             InitializeComponent();
             InitializeConfiguration();
             SelectBinariesPath();
@@ -65,12 +78,20 @@ namespace AutoMerge
                 btn.Margin = new Thickness(0, 0, 10, 0);
                 btn.VerticalAlignment = VerticalAlignment.Center;
 
+                if (fileType.NeedEnterFps) {
+                    btn.Checked += (s, e) => { Fps.IsEnabled = true; };
+                    btn.Unchecked += (s, e) => { Fps.IsEnabled = false; };
+                }
+                if (fileType.UIBaseCheckBox != null) {
+                    btn.Checked += (s, e) => { (FindName(fileType.UIBaseCheckBox) as CheckBox).IsChecked = true; };
+                }
+
                 panel.Children.Add(btn);
             };
 
-            foreach (var pair in VideoSourceFileTypes) generateButton(pair.Key, pair.Value, VideoSourcePanel);
-            foreach (var pair in AudioSourceFileTypes) generateButton(pair.Key, pair.Value, AudioSourcePanel);
-            foreach (var pair in OutputFileTypes) generateButton(pair.Key, pair.Value, OutputPanel);
+            foreach (var pair in _videoSourceFileTypes) generateButton(pair.Key, pair.Value, VideoSourcePanel);
+            foreach (var pair in _audioSourceFileTypes) generateButton(pair.Key, pair.Value, AudioSourcePanel);
+            foreach (var pair in _outputFileTypes) generateButton(pair.Key, pair.Value, OutputPanel);
 
             AudioLanguage = new TextBox {
                 Text = "jpn",
@@ -92,29 +113,21 @@ namespace AutoMerge
         }
 
         private void InitializeConfiguration()
-        {/*
-            Configuration localConfig = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.PerUserRoamingAndLocal);
-            ExeConfigurationFileMap configFileMap = new ExeConfigurationFileMap { ExeConfigFilename = localConfig.FilePath };
-            Config = ConfigurationManager.OpenMappedExeConfiguration(configFileMap, ConfigurationUserLevel.PerUserRoamingAndLocal);
-
-            string currentSection = null;
-            try {
-                currentSection =
-           (string)Config.GetSection("FilePath");
+        {
+_open:
+            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\AutoMerge")) {
+                if (null == key) {
+                    Registry.CurrentUser.CreateSubKey(@"SOFTWARE\AutoMerge");
+                    goto _open;
+                }
+                _mkvMergeFilePath = key.GetValue("MkvMergeFilePath", string.Empty).ToString();
+                _mp4MuxerFilePath = key.GetValue("Mp4MuxerFilePath", string.Empty).ToString();
             }
-
-            Settings = Config.AppSettings.Settings;
-
-            if (null == Settings["MkvMergeFilePath"]) Settings.Add("MkvMergeFilePath", string.Empty);
-            if (null == Settings["Mp4MuxerFilePath"]) Settings.Add("Mp4MuxerFilePath", string.Empty);
-
-            MkvMergeFilePath = Settings["MkvMergeFilePath"].Value;
-            MkvMergeFilePath = Settings["Mp4MuxerFilePath"].Value;*/
         }
 
         private void SelectBinariesPath()
         {
-            Func<string, string> selectFile = (title) => {
+            Func<string, string> selectFile = title => {
                 var dlg = new OpenFileDialog();
                 dlg.Filter = "exe(*.exe)|*.exe";
                 dlg.Title = title;
@@ -125,30 +138,48 @@ namespace AutoMerge
                 return null;
             };
 
-            while (string.IsNullOrEmpty(MkvMergeFilePath) || !File.Exists(MkvMergeFilePath)) {
-                MkvMergeFilePath = selectFile("选择 MKVToolNix mkvmerge.exe");
-                if (string.IsNullOrEmpty(MkvMergeFilePath) && MessageBoxResult.Yes == MessageBox.Show("不使用 mkv 合并功能？", "确认", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.Yes)) {
-                    OutputFileTypes.Remove(OutputType.Mkv);
-                    break;
+            MessageBoxResult mbResult;
+
+            while (string.IsNullOrEmpty(_mkvMergeFilePath) || !File.Exists(_mkvMergeFilePath)) {
+                _mkvMergeFilePath = selectFile("选择 MKVToolNix mkvmerge.exe");
+
+                if (string.IsNullOrEmpty(_mkvMergeFilePath)) {
+                    mbResult = MessageBox.Show("不使用 mkv 封装功能？", "确认", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.Yes);
+                    if (MessageBoxResult.Yes == mbResult) {
+                        _mkvMergeFilePath = string.Empty;
+                        _outputFileTypes.Remove(OutputType.Mkv);
+                        break;
+                    }
+                } else {
+                    mbResult = MessageBox.Show($"确定选对了？选错了可不好改哟 {_mkvMergeFilePath}", "确认", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.Yes);
+                    if (MessageBoxResult.No == mbResult) {
+                        _mkvMergeFilePath = string.Empty;
+                    }
                 }
             }
 
-            while (string.IsNullOrEmpty(Mp4MuxerFilePath) || !File.Exists(Mp4MuxerFilePath)) {
-                Mp4MuxerFilePath = selectFile("选择 L-SMASH muxer.exe");
-                if (string.IsNullOrEmpty(Mp4MuxerFilePath) && MessageBoxResult.Yes == MessageBox.Show("不使用 mp4 合并功能？", "确认", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.Yes)) {
-                    OutputFileTypes.Remove(OutputType.Mp4);
-                    break;
+            while (string.IsNullOrEmpty(_mp4MuxerFilePath) || !File.Exists(_mp4MuxerFilePath)) {
+                _mp4MuxerFilePath = selectFile("选择 L-SMASH muxer.exe");
+
+                if (string.IsNullOrEmpty(_mp4MuxerFilePath)) {
+                    mbResult = MessageBox.Show("不使用 mp4 封装功能？", "确认", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.Yes);
+                    if (MessageBoxResult.Yes == mbResult) {
+                        _mp4MuxerFilePath = string.Empty;
+                        _outputFileTypes.Remove(OutputType.Mp4);
+                        break;
+                    }
+                } else {
+                    mbResult = MessageBox.Show($"确定选对了？选错了可不好改哟 {_mp4MuxerFilePath}", "确认", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.Yes);
+                    if (MessageBoxResult.No == mbResult) {
+                        _mp4MuxerFilePath = string.Empty;
+                    }
                 }
             }
-            /*
-            Settings["MkvMergeFilePath"].Value = MkvMergeFilePath;
-            Settings["Mp4MuxerFilePath"].Value = Mp4MuxerFilePath;
-            try {
-                Config.Save(ConfigurationSaveMode.Modified);
-            } catch (Exception e) {
 
-                throw;
-            }*/
+            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\AutoMerge", true)) {
+                key.SetValue("MkvMergeFilePath", _mkvMergeFilePath);
+                key.SetValue("Mp4MuxerFilePath", _mp4MuxerFilePath);
+            }
         }
 
         private void ForceChecked(object sender, RoutedEventArgs e)
@@ -214,19 +245,12 @@ namespace AutoMerge
                 return result;
             }
 
-            var dirs = Directory.EnumerateDirectories((null == directory ? Directory.GetCurrentDirectory() : directory));
-            foreach (var dir in dirs) {
-                var files = Directory.EnumerateFiles(dir, filePattern);
-                foreach (var file in files) {
-                    result.Add(file);
-                    Console.WriteLine(file);
-                }
-            }
+            result.AddRange(Directory.EnumerateFiles((null == directory ? Directory.GetCurrentDirectory() : directory), filePattern, SearchOption.AllDirectories));
             return result;
         }
 
-        private List<Episode> MakeEpisodes(
-            List<string> m2tsfiles,
+        private List<Episode> GenerateEpisodes(
+            List<string> videoFiles,
             List<AudioSourceType> audioTypes,
             VideoSourceType videoType,
             OutputType outputType,
@@ -240,13 +264,13 @@ namespace AutoMerge
 
             List<Episode> episodes = new List<Episode>();
 
-            foreach (var file in m2tsfiles) {
+            foreach (var file in videoFiles) {
                 string directory = Path.GetDirectoryName(file);
                 string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
                 string baseName = $@"{directory}\{fileNameWithoutExtension}";
 
-                string outputFile = baseName + this.OutputFileTypes[outputType].FileExtension;
-                string videoFile = baseName + this.VideoSourceFileTypes[videoType].FileExtension;
+                string outputFile = baseName + _outputFileTypes[outputType].FileExtension;
+                string videoFile = file;
                 string chapterFile = baseName + ".txt";
                 var audioFiles = new List<string>();
                 var subtitleFiels = new List<string>();
@@ -255,12 +279,12 @@ namespace AutoMerge
                 if (!File.Exists(videoFile)) continue;
 
                 foreach (var audio in audioTypes) {
-                    audioFiles.AddRange(this.EnumerateFiles($"{fileNameWithoutExtension}*{this.AudioSourceFileTypes[audio].FileExtension}", directory, 0));
+                    audioFiles.AddRange(EnumerateFiles($"{fileNameWithoutExtension}*{_audioSourceFileTypes[audio].FileExtension}", directory, 0));
                 }
 
                 if (0 == audioFiles.Count) continue;
 
-                subtitleFiels.AddRange(this.EnumerateFiles($"{fileNameWithoutExtension}*.sup", directory, 0));
+                subtitleFiels.AddRange(EnumerateFiles($"{fileNameWithoutExtension}*.sup", directory, 0));
 
                 Episode ep = new Episode() {
                     VideoFile = videoFile,
@@ -316,7 +340,7 @@ namespace AutoMerge
         private string Mp4MergeParameter(Episode episode)
         {
             var parameters = new List<string>();
-            //mp4muxer --interleave 500 --file-format mp4 --chapter {0} -i{1}?fps=24000/1001 -i{2}?language=jpn -o {3}
+            //mp4muxer --file-format mp4 --chapter {0} -i{1}?fps=24000/1001 -i{2}?language=jpn -o {3}
             parameters.Add("--file-format mp4");
 
             if (episode.ChapterFile != null) parameters.Add($"--chapter \"{episode.ChapterFile}\"");
@@ -340,10 +364,10 @@ namespace AutoMerge
                 string parameter = null;
                 switch (ep.OutputFileType) {
                     case OutputType.Mkv:
-                        parameter = this.MkvMergeParameter(ep);
+                        parameter = MkvMergeParameter(ep);
                         break;
                     case OutputType.Mp4:
-                        parameter = this.Mp4MergeParameter(ep);
+                        parameter = Mp4MergeParameter(ep);
                         break;
                     default:
                         continue;
@@ -357,69 +381,100 @@ namespace AutoMerge
         private void Start_Click(object sender, RoutedEventArgs e)
         {
 
-            List<AudioSourceType> audioType;
-            VideoSourceType videoType;
-            OutputType outputType;
+            var audioType = new List<AudioSourceType>();
+            VideoSourceType? videoType = null;
+            OutputType? outputType = null;
             #region UI
-            /*
-            if (this.rdoFlac.Checked) {
-                audioType = AudioSourceType.Flac;
-            } else if (this.rdoM4a.Checked) {
-                audioType = AudioSourceType.M4a;
-            } else if (this.rdoAudioBoth.Checked) {
-                audioType = AudioSourceType.Both;
-            } else {
-                MessageBox.Show("需要选择输入音频格式");
+            if (true == VideoSourceCheck.IsChecked) {
+                foreach (var btn in VideoSourcePanel.Children) {
+                    if (!(btn is ToggleButton)) continue;
+                    if (!(true == (btn as ToggleButton).IsChecked)) continue;
+                    videoType = (btn as ToggleButton).Tag as VideoSourceType?;
+                    break;
+                }
+
+                if (!videoType.HasValue) {
+                    MessageBox.Show("需要选择输入视频格式", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+            }
+
+            if (true == AudioSourceCheck.IsChecked) {
+                foreach (var btn in AudioSourcePanel.Children) {
+                    if (!(btn is ToggleButton)) continue;
+                    if (!(true == (btn as ToggleButton).IsChecked)) continue;
+                    audioType.Add(((btn as ToggleButton).Tag as AudioSourceType?).Value);
+                }
+
+                if (!videoType.HasValue) {
+                    MessageBox.Show("需要选择输入音频格式", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+            }
+
+            foreach (var btn in OutputPanel.Children) {
+                if (!(btn is ToggleButton)) continue;
+                if (!(true == (btn as ToggleButton).IsChecked)) continue;
+                outputType = (btn as ToggleButton).Tag as OutputType?;
+                break;
+            }
+            if (!outputType.HasValue) {
+                MessageBox.Show("需要选择输出视频格式", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
-            if (this.rdo264.Checked) {
-                videoType = VideoSourceType.Avc;
-            } else if (this.rdoHevc.Checked) {
-                videoType = VideoSourceType.Hevc;
-            } else {
-                MessageBox.Show("需要选择输入视频格式");
+            if (!(true == VideoSourceCheck.IsChecked)
+                && !(true == AudioSourceCheck.IsChecked)
+                && !(true == ChapterCheck.IsChecked)
+                && !(true == SubtitleCheck.IsChecked)
+            ) {
+                for (int i = 0; i < 100; i++) {
+                    Left += ((0 == i % 2) ? 5 : -5);
+                    Thread.Sleep(5);
+                }
+                MessageBox.Show("什么输入类型都不选，我好慌啊", "倒是选一个呀", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
-
-            if (this.rdoMkv.Checked) {
-                outputType = OutputType.Mkv;
-            } else if (this.rdoMp4.Checked) {
-                outputType = OutputType.Mp4;
-            } else {
-                MessageBox.Show("需要选择输出视频格式");
-                return;
-            }
-            */
             #endregion
 
-            audioType = new List<AudioSourceType>();
-            videoType = VideoSourceType.Avc;
-            outputType = OutputType.Mkv;
-
-            var m2tsFiles = EnumerateFiles("*.m2ts");
-            var episodes = MakeEpisodes(m2tsFiles, audioType, videoType, outputType,
-                Fps.Text, AudioLanguage.Text, SubtitleLanguage.Text, true == ChapterCheck.IsChecked, true == SubtitleCheck.IsChecked);
+            var videoFiles = EnumerateFiles($"*{_videoSourceFileTypes[videoType.Value].FileExtension}");
+            var episodes = GenerateEpisodes(
+                videoFiles,
+                audioType,
+                videoType.Value,
+                outputType.Value,
+                Fps.Text,
+                AudioLanguage.Text,
+                SubtitleLanguage.Text,
+                ChapterCheck.IsChecked.GetValueOrDefault(false),
+                SubtitleCheck.IsChecked.GetValueOrDefault(false)
+            );
             var mergeParameters = MakeMergeParameters(episodes);
 
-            Parallel.ForEach(mergeParameters, new ParallelOptions {
-                MaxDegreeOfParallelism = 4
-            }, parameter => {
+            Start.IsEnabled = false;
+
+            Parallel.ForEach(mergeParameters, parameter => {
                 string mainProcess = null;
                 switch (parameter.Item1) {
                     case OutputType.Mkv:
-                        mainProcess = this.MkvMergeFilePath;
+                        mainProcess = this._mkvMergeFilePath;
                         break;
                     case OutputType.Mp4:
-                        mainProcess = this.Mp4MuxerFilePath;
+                        mainProcess = this._mp4MuxerFilePath;
                         break;
                     default:
                         return;
                 }
 
-                Console.WriteLine($"{mainProcess} {parameter.Item2}");
-                StartProcess(mainProcess, parameter.Item2);
+                Console.WriteLine($"{mainProcess} {parameter.Item2}\n");
+                //  StartProcess(mainProcess, parameter.Item2);
             });
+
+            MessageBoxResult mbResult;
+            do {
+                mbResult = MessageBox.Show("请先播放检查封装成品，再上传！", "注意", MessageBoxButton.YesNo, MessageBoxImage.Information, MessageBoxResult.No);
+            } while (MessageBoxResult.No == mbResult);
+            Start.IsEnabled = true;
         }
     }
 }

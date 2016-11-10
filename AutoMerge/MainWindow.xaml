@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:AutoMerge"
         mc:Ignorable="d"
-        Title="合并" Height="270" Width="450" WindowStartupLocation="CenterScreen" ResizeMode="CanMinimize" Loaded="Window_Loaded">
+        Title="(半)自动封装" Height="270" Width="450" WindowStartupLocation="CenterScreen" ResizeMode="CanMinimize" Loaded="Window_Loaded">
     <Grid>
         <GroupBox Header="输入" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="414">
             <Grid>
@@ -35,10 +35,10 @@
                 </Grid>
                 <Grid>
                     <TextBlock HorizontalAlignment="Left" Margin="30,30,0,0" TextWrapping="Wrap" Text="FPS" VerticalAlignment="Top"/>
-                    <TextBox x:Name="Fps" HorizontalAlignment="Left" Margin="80,29,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="80" Text="24000/1001" Height="20"/>
+                    <TextBox x:Name="Fps" IsEnabled="False" HorizontalAlignment="Left" Margin="80,29,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="80" Text="24000/1001" Height="20"/>
                 </Grid>
             </Grid>
         </GroupBox>
-        <Button x:Name="Start" Content="开始合并" HorizontalAlignment="Left" Margin="10,201,0,0" VerticalAlignment="Top" Width="414" Height="25" Click="Start_Click"/>
+        <Button x:Name="Start" Content="开始封装" HorizontalAlignment="Left" Margin="10,201,0,0" VerticalAlignment="Top" Width="414" Height="25" Click="Start_Click"/>
     </Grid>
 </Window>

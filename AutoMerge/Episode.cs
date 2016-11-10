@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Controls;
 
 namespace AutoMerge
 {
@@ -51,6 +52,8 @@ namespace AutoMerge
         }
         public string FileExtension { get; set; }
         public ButtonType UIButtonType { get; set; } = ButtonType.Radio;
+        public bool NeedEnterFps { get; set; } = false;
+        public string UIBaseCheckBox { get; set; } = null;
     }
 
     class Episode
