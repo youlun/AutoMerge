@@ -4,6 +4,7 @@ using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -33,7 +34,7 @@ namespace AutoMerge
         };
         private Dictionary<OutputType, FileType> _outputFileTypes = new Dictionary<OutputType, FileType>
         {
-            { OutputType.Mkv, new FileType { FileExtension = ".mkv" } },
+            { OutputType.Mkv, new FileType { FileExtension = ".mkv", NeedEnterFps = true } },
             { OutputType.Mp4, new FileType { FileExtension = ".mp4", NeedEnterFps = true } }
         };
 
@@ -276,7 +277,9 @@ _open:
 
                 if (0 == audioFiles.Count) continue;
 
-                subtitleFiels.AddRange(EnumerateFiles($"{fileNameWithoutExtension}*.sup", directory, 0));
+                if (mergeSubtitle) {
+                    subtitleFiels.AddRange(EnumerateFiles($"{fileNameWithoutExtension}*.sup", directory, 0));
+                }
 
                 Episode ep = new Episode() {
                     VideoFile = videoFile,
@@ -286,7 +289,7 @@ _open:
                     ChapterFile = File.Exists(chapterFile) && mergeChapter ? chapterFile : null,
                     AudioFiles = audioFiles,
                     AudioLanguage = audioLanguage,
-                    SubtitleFiles = mergeSubtitle ? subtitleFiels : null,
+                    SubtitleFiles = subtitleFiels,
                     SubtitleLanguage = subtitleLanguage
                 };
                 episodes.Add(ep);
@@ -300,31 +303,37 @@ _open:
             string trackTemplate = "--language 0:{0} \"(\" \"{1}\" \")\"";
 
             var parameters = new List<string>();
-            var trackOrder = new List<string>();
 
-            int fileID = 0;
-
+            /* global options  */
             parameters.Add("--ui-language zh_CN");
             parameters.Add($"--output \"{episode.OutputFile}\"");
 
-            parameters.Add(string.Format(trackTemplate, "und", episode.VideoFile));
-            trackOrder.Add($"{fileID++}:0");
+            /* video track */
+            parameters.Add("--language 0:und");
+            parameters.Add($"--default-duration 0:{episode.VideoFps}p \"(\" \"{episode.VideoFile}\" \")\" ");
 
+            /* audio track */
             foreach (var audioFile in episode.AudioFiles) {
                 parameters.Add(string.Format(trackTemplate, episode.AudioLanguage, audioFile));
-                trackOrder.Add($"{fileID++}:0");
             }
 
-            if (episode.SubtitleFiles != null) {
-                foreach (var subtitleFile in episode.SubtitleFiles) {
-                    parameters.Add(string.Format(trackTemplate, episode.SubtitleLanguage, subtitleFile));
-                    trackOrder.Add($"{fileID++}:0");
-                }
+            /* subtitle track */
+            foreach (var subtitleFile in episode.SubtitleFiles) {
+                parameters.Add(string.Format(trackTemplate, episode.SubtitleLanguage, subtitleFile));
             }
 
-            if (episode.ChapterFile != null) parameters.Add($"--chapters \"{episode.ChapterFile}\"");
+            /* chapter */
+            if (episode.ChapterFile != null) {
+                parameters.Add($"--chapters \"{episode.ChapterFile}\"");
+            }
 
-            parameters.Add(string.Format("--track-order {0}", string.Join(",", trackOrder)));
+            /* track order */
+            int trackCount = 1 + episode.AudioFiles.Count + episode.SubtitleFiles.Count;
+            var trackOrder = new List<string>(trackCount);
+            for (int i = 0; i < trackCount; i++) {
+                trackOrder.Add($"{i}:0");
+            }
+            parameters.Add($"--track-order {string.Join(",", trackOrder)}");
 
             return string.Join(" ", parameters);
         }
@@ -332,7 +341,7 @@ _open:
         private string Mp4MergeParameter(Episode episode)
         {
             var parameters = new List<string>();
-            //mp4muxer --file-format mp4 --chapter {0} -i{1}?fps=24000/1001 -i{2}?language=jpn -o {3}
+
             parameters.Add("--file-format mp4");
 
             if (episode.ChapterFile != null) parameters.Add($"--chapter \"{episode.ChapterFile}\"");
@@ -421,6 +430,10 @@ _open:
             }
             if (!outputType.HasValue) {
                 MessageBox.Show("需要选择输出视频格式", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            if (_outputFileTypes[outputType.Value].NeedEnterFps && string.IsNullOrEmpty(Fps.Text)) {
+                MessageBox.Show("需要设置输出视频的FPS", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
