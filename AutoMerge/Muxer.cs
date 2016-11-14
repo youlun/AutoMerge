@@ -44,7 +44,7 @@ namespace AutoMerge
             fileListBuildedCallback(episodes);
 
             new Thread(new ThreadStart(() => {
-                Parallel.ForEach(mergeParameters, new ParallelOptions {  MaxDegreeOfParallelism = 1 }, parameter => {
+                Parallel.ForEach(mergeParameters, parameter => {
                     var outputType = parameter.Value.Item1;
                     var taskId = parameter.Key;
                     var args = parameter.Value.Item2;
