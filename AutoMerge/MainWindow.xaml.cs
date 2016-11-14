@@ -59,6 +59,7 @@ namespace AutoMerge
                 }
             }
             Console.WriteLine("这里是日志，不能关，可以最小化");
+            Console.WriteLine("(log window)");
 
             InitializeComponent();
             InitializeConfiguration();
@@ -98,7 +99,7 @@ namespace AutoMerge
             AudioLanguage = new TextBox {
                 Text = "jpn",
                 Width = 30,
-                Height = 20
+                Height = 22
             };
 
             UsingAllAudioSourceType = new CheckBox {
