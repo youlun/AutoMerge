@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Configuration;
 using System.Diagnostics;
 using System.IO;
@@ -10,6 +11,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Threading;
 using Microsoft.Win32;
 
@@ -24,8 +26,15 @@ namespace AutoMerge
         private TextBox audioLanguageInput = null;
         private CheckBox usingAllAudioSourceTypeSelector = null;
 
+        private ObservableCollection<MuxingTask> _taskList = new ObservableCollection<MuxingTask>();
+        private object _taskListLock = new object();
+        public ObservableCollection<MuxingTask> TaskList { get { return _taskList; } set { _taskList = value; } }
+
         public MainWindow()
         {
+            BindingOperations.EnableCollectionSynchronization(TaskList, _taskListLock);
+
+            DataContext = this;
             InitializeComponent();
             InitializeLogWindow();
             InitializeSelectors();
@@ -48,6 +57,37 @@ namespace AutoMerge
             }
             Console.WriteLine("这里是日志，不能关，可以最小化");
             Console.WriteLine("(log window)");
+        }
+
+        private void UpdateTaskProgress(Guid taskId, int progress)
+        {
+            lock (_taskList) {
+                foreach (var task in _taskList) {
+                    if (task.TaskId != taskId) continue;
+                    task.Percent = progress;
+                    task.StatusText = "进行中";
+                }
+            }
+        }
+        private void UpdateTaskStatusText(Guid taskId, string statusText)
+        {
+            lock (_taskList) {
+                foreach (var task in _taskList) {
+                    if (task.TaskId != taskId) continue;
+                    task.StatusText = statusText;
+                }
+            }
+        }
+        private void RemoveTask(Guid taskId)
+        {
+            lock (_taskList) {
+                MuxingTask muxingTask = null;
+                foreach (var task in _taskList) {
+                    if (task.TaskId != taskId) continue;
+                    muxingTask = task;
+                }
+                _taskList.Remove(muxingTask);
+            }
         }
 
         private void GenerateSelector(object tag, FileType fileType, ref WrapPanel parentPanel)
@@ -161,7 +201,6 @@ namespace AutoMerge
 
         private void EachSelectors(bool onlyOne, ref WrapPanel panel, Action<object> configCallback)
         {
-
             foreach (var children in panel.Children) {
                 var btn = children as ToggleButton;
                 if (null == btn || !btn.IsChecked.GetValueOrDefault() || usingAllAudioSourceTypeSelector == btn) {
@@ -241,14 +280,40 @@ namespace AutoMerge
                 SubtitleLanguage = subtitleLanguageInput.Text,
                 VideoFps = videoFpsInput.Text,
                 VideoSourceType = videoType.Value
+            }, episodes => {
+                foreach (var episode in episodes) {
+                    TaskList.Add(new MuxingTask {
+                        OutputFileName = episode.OutputFile,
+                        Percent = 0,
+                        StatusText = "等待中",
+                        TaskId = episode.TaskId
+                    });
+                }
+                if (episodes.Count > 0) {
+                    taskProgressPage.IsSelected = true;
+                }
+            }, (taskId) => {
+                UpdateTaskStatusText(taskId, "读取中");
+            }, (taskId, percent) => {
+                UpdateTaskProgress(taskId, percent);
+            },
+            (taskId) => {
+                RemoveTask(taskId);
+            }, () => {
+                MessageBoxResult mbResult;
+                do {
+                    mbResult = MessageBox.Show("请先播放检查封装成品，再上传！", "注意", MessageBoxButton.YesNo, MessageBoxImage.Information, MessageBoxResult.No);
+                } while (MessageBoxResult.No == mbResult);
+
+                startButton.Dispatcher.BeginInvoke(new Action(() => {
+                    startButton.IsEnabled = true;
+                }), DispatcherPriority.Normal);
             });
+        }
 
-            MessageBoxResult mbResult;
-            do {
-                mbResult = MessageBox.Show("请先播放检查封装成品，再上传！", "注意", MessageBoxButton.YesNo, MessageBoxImage.Information, MessageBoxResult.No);
-            } while (MessageBoxResult.No == mbResult);
-
-            startButton.IsEnabled = true;
+        private void taskList_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            fileNameColumnHeader.Width = taskList.ActualWidth - 220;
         }
     }
 }

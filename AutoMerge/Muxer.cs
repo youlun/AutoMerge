@@ -4,7 +4,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Threading;
 
 namespace AutoMerge
 {
@@ -23,30 +27,73 @@ namespace AutoMerge
             public bool MuxSubtitle { get; set; }
         }
 
-        internal void StartMux(MuxingConfiguration configuration)
-        {
+        internal void StartMux(
+            MuxingConfiguration configuration,
+            Action<List<Episode>> fileListBuildedCallback,
+            Action<Guid> taskStartedCallback,
+            Action<Guid, int> taskProgressChangedCallback,
+            Action<Guid> taskCompletedCallback,
+            Action allTaskCompletedCallback
+        ) {
             string videoFileExtension = Settings.VideoSourceFileTypes[configuration.VideoSourceType].FileExtension;
             var videoFiles = EnumerateFiles($"*{videoFileExtension}", configuration.MainDirectory);
             var episodes = GenerateEpisodes(videoFiles, configuration);
 
             var mergeParameters = GenerateMergeParameters(episodes);
 
-            Parallel.ForEach(mergeParameters, parameter => {
-                string mainProcess = null;
-                switch (parameter.Item1) {
-                    case OutputType.Mkv:
-                        mainProcess = Settings.MkvMergeFilePath;
-                        break;
-                    case OutputType.Mp4:
-                        mainProcess = Settings.Mp4MuxerFilePath;
-                        break;
-                    default:
-                        return;
-                }
+            fileListBuildedCallback(episodes);
 
-                Console.WriteLine($"{mainProcess} {parameter.Item2}\n");
-                //StartProcess(mainProcess, parameter.Item2);
-            });
+            new Thread(new ThreadStart(() => {
+                Parallel.ForEach(mergeParameters, new ParallelOptions {  MaxDegreeOfParallelism = 1 }, parameter => {
+                    var outputType = parameter.Value.Item1;
+                    var taskId = parameter.Key;
+                    var args = parameter.Value.Item2;
+                    long totalFileSize = parameter.Value.Item3;
+
+                    string mainProcess = null;
+                    switch (outputType) {
+                        case OutputType.Mkv:
+                            mainProcess = Settings.MkvMergeFilePath;
+                            break;
+                        case OutputType.Mp4:
+                            mainProcess = Settings.Mp4MuxerFilePath;
+                            break;
+                        default:
+                            return;
+                    }
+
+                    Console.WriteLine($"{mainProcess} {args}\n");
+
+                    taskStartedCallback(taskId);
+                    ProcessUtility.StartProcess(mainProcess, args, true, true, true, () => {
+                        taskStartedCallback(taskId);
+                    }, stdout => {
+                        if (null == stdout) return;
+
+                        Match progressMatch = null;
+                        int progress = 0;
+                        switch (outputType) {
+                            case OutputType.Mkv:
+                                //Progress: 100%
+                                progressMatch = Regex.Match(stdout, @"Progress: (\d*?)%", RegexOptions.Compiled);
+                                if (progressMatch.Groups.Count < 2) return;
+                                progress = Convert.ToInt32(progressMatch.Groups[1].Value);
+                                break;
+                            case OutputType.Mp4:
+                                //Importing: 410017308 bytes
+                                progressMatch = Regex.Match(stdout, @"Importing: (\d*?) bytes", RegexOptions.Compiled);
+                                if (progressMatch.Groups.Count < 2) return;
+                                progress = Convert.ToInt32(Convert.ToDouble(progressMatch.Groups[1].Value) / totalFileSize * 100d);
+                                break;
+                        }
+
+                        taskProgressChangedCallback(taskId, progress);
+                    }, () => {
+                        taskCompletedCallback(taskId);
+                    });
+                });
+                allTaskCompletedCallback();
+            })).Start();
         }
 
         private List<string> EnumerateFiles(string filePattern, string directory = null, SearchOption searchOption = SearchOption.AllDirectories)
@@ -58,31 +105,6 @@ namespace AutoMerge
             ).ToList();
         }
 
-        private void StartProcess(string filename, string arguments, bool waitForExit = true, bool hidden = false, bool redirectStdout = false)
-        {
-            ProcessStartInfo psi = new ProcessStartInfo() {
-                FileName = filename,
-                Arguments = arguments,
-                UseShellExecute = true
-            };
-
-            if (hidden) {
-                psi.WindowStyle = ProcessWindowStyle.Hidden;
-                psi.CreateNoWindow = true;
-            }
-            if (redirectStdout) {
-                psi.RedirectStandardOutput = true;
-                psi.UseShellExecute = false;
-            }
-
-            Process p = new Process() {
-                StartInfo = psi,
-                EnableRaisingEvents = true
-            };
-            p.Start();
-            if (waitForExit)
-                p.WaitForExit();
-        }
         
         private List<Episode> GenerateEpisodes(List<string> videoFiles, MuxingConfiguration configuration)
         {
@@ -93,6 +115,8 @@ namespace AutoMerge
                 string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
                 string baseName = $@"{directory}\{fileNameWithoutExtension}";
 
+                long totalSize = 0;
+
                 string outputFile = baseName + Settings.OutputFileTypes[configuration.OutputType].FileExtension;
                 string videoFile = file;
                 string chapterFile = baseName + Settings.ChapterFileExtension;
@@ -102,16 +126,26 @@ namespace AutoMerge
                 if (File.Exists(outputFile)) continue;
                 if (!File.Exists(videoFile)) continue;
 
+                totalSize += new FileInfo(videoFile).Length;
+
                 if (configuration.AudioSourceTypes != null && configuration.AudioSourceTypes.Count > 0) {
                     foreach (var audioType in configuration.AudioSourceTypes) {
                         string audioFileExtension = Settings.AudioSourceFileTypes[audioType].FileExtension;
                         audioFiles.AddRange(EnumerateFiles($"{fileNameWithoutExtension}*{audioFileExtension}", directory, SearchOption.TopDirectoryOnly));
                     }
                     if (0 == audioFiles.Count) continue;
+
+                    foreach (var audioFile in audioFiles) {
+                        totalSize += new FileInfo(audioFile).Length;
+                    }
                 }
                 
                 if (configuration.MuxSubtitle) {
                     subtitleFiles.AddRange(EnumerateFiles($"{fileNameWithoutExtension}*{Settings.SubtitleFileExtension}", directory, SearchOption.TopDirectoryOnly));
+                }
+
+                if (!File.Exists(chapterFile) || !configuration.MuxChapter) {
+                    chapterFile = null;
                 }
 
                 Episode ep = new Episode() {
@@ -119,11 +153,13 @@ namespace AutoMerge
                     VideoFps = configuration.VideoFps,
                     OutputFile = outputFile,
                     OutputFileType = configuration.OutputType,
-                    ChapterFile = File.Exists(chapterFile) && configuration.MuxChapter ? chapterFile : null,
+                    ChapterFile = chapterFile,
                     AudioFiles = audioFiles,
                     AudioLanguage = configuration.AudioLanguage,
                     SubtitleFiles = subtitleFiles,
-                    SubtitleLanguage = configuration.SubtitleLanguage
+                    SubtitleLanguage = configuration.SubtitleLanguage,
+                    TaskId = Guid.NewGuid(),
+                    TotalFileSize = totalSize
                 };
                 episodes.Add(ep);
             }
@@ -131,9 +167,9 @@ namespace AutoMerge
             return episodes;
         }
         
-        private List<Tuple<OutputType, string>> GenerateMergeParameters(List<Episode> episodes)
+        private Dictionary<Guid, Tuple<OutputType, string, long>> GenerateMergeParameters(List<Episode> episodes)
         {
-            var mergeParameters = new List<Tuple<OutputType, string>>();
+            var mergeParameters = new Dictionary<Guid, Tuple<OutputType, string, long>>();
 
             foreach (var ep in episodes) {
                 string parameter;
@@ -147,7 +183,7 @@ namespace AutoMerge
                     default:
                         continue;
                 }
-                mergeParameters.Add(Tuple.Create(ep.OutputFileType, parameter));
+                mergeParameters.Add(ep.TaskId, Tuple.Create(ep.OutputFileType, parameter, ep.TotalFileSize));
             }
 
             return mergeParameters;
@@ -160,7 +196,7 @@ namespace AutoMerge
             var parameters = new List<string>();
 
             /* global options  */
-            parameters.Add("--ui-language zh_CN");
+            parameters.Add("--ui-language en");
             parameters.Add($"--output \"{episode.OutputFile}\"");
 
             /* video track */
