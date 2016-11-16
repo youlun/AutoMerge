@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using AutoMerge.Utility;
 
 namespace AutoMerge
 {
@@ -27,21 +28,29 @@ namespace AutoMerge
             public bool MuxSubtitle { get; set; }
         }
 
+        private MuxingConfiguration _muxingConfiguration;
+
+        private Muxer() { }
+
+        internal Muxer(MuxingConfiguration muxingConfiguration)
+        {
+            _muxingConfiguration = muxingConfiguration;
+        }
+
         internal void StartMux(
-            MuxingConfiguration configuration,
-            Action<List<Episode>> fileListBuildedCallback,
+            Action<List<Episode>> fileListBuiltCallback,
             Action<Guid> taskStartedCallback,
             Action<Guid, int> taskProgressChangedCallback,
             Action<Guid> taskCompletedCallback,
             Action allTaskCompletedCallback
         ) {
-            string videoFileExtension = Settings.VideoSourceFileTypes[configuration.VideoSourceType].FileExtension;
-            var videoFiles = EnumerateFiles($"*{videoFileExtension}", configuration.MainDirectory);
-            var episodes = GenerateEpisodes(videoFiles, configuration);
+            string videoFileExtension = Settings.VideoSourceFileTypes[_muxingConfiguration.VideoSourceType].FileExtension;
+            var videoFiles = FileSystemUtility.EnumerateFiles($"*{videoFileExtension}", _muxingConfiguration.MainDirectory);
+            var episodes = GenerateEpisodes(videoFiles);
 
             var mergeParameters = GenerateMergeParameters(episodes);
 
-            fileListBuildedCallback(episodes);
+            fileListBuiltCallback(episodes);
 
             new Thread(new ThreadStart(() => {
                 Parallel.ForEach(mergeParameters, parameter => {
@@ -96,17 +105,7 @@ namespace AutoMerge
             })).Start();
         }
 
-        private List<string> EnumerateFiles(string filePattern, string directory = null, SearchOption searchOption = SearchOption.AllDirectories)
-        {
-            return Directory.EnumerateFiles(
-                (string.IsNullOrEmpty(directory) ? Directory.GetCurrentDirectory() : directory),
-                filePattern,
-                searchOption
-            ).ToList();
-        }
-
-        
-        private List<Episode> GenerateEpisodes(List<string> videoFiles, MuxingConfiguration configuration)
+        private List<Episode> GenerateEpisodes(List<string> videoFiles)
         {
             var episodes = new List<Episode>();
 
@@ -117,7 +116,7 @@ namespace AutoMerge
 
                 long totalSize = 0;
 
-                string outputFile = baseName + Settings.OutputFileTypes[configuration.OutputType].FileExtension;
+                string outputFile = baseName + Settings.OutputFileTypes[_muxingConfiguration.OutputType].FileExtension;
                 string videoFile = file;
                 string chapterFile = baseName + Settings.ChapterFileExtension;
                 var audioFiles = new List<string>();
@@ -126,38 +125,40 @@ namespace AutoMerge
                 if (File.Exists(outputFile)) continue;
                 if (!File.Exists(videoFile)) continue;
 
-                totalSize += new FileInfo(videoFile).Length;
+                totalSize += FileSystemUtility.GetFileSize(videoFile);
 
-                if (configuration.AudioSourceTypes != null && configuration.AudioSourceTypes.Count > 0) {
-                    foreach (var audioType in configuration.AudioSourceTypes) {
+                if (_muxingConfiguration.AudioSourceTypes != null && _muxingConfiguration.AudioSourceTypes.Count > 0) {
+                    foreach (var audioType in _muxingConfiguration.AudioSourceTypes) {
                         string audioFileExtension = Settings.AudioSourceFileTypes[audioType].FileExtension;
-                        audioFiles.AddRange(EnumerateFiles($"{fileNameWithoutExtension}*{audioFileExtension}", directory, SearchOption.TopDirectoryOnly));
+                        string filePattern = $"{fileNameWithoutExtension}*{audioFileExtension}";
+                        audioFiles.AddRange(FileSystemUtility.EnumerateFiles(filePattern, directory, SearchOption.TopDirectoryOnly));
                     }
                     if (0 == audioFiles.Count) continue;
 
                     foreach (var audioFile in audioFiles) {
-                        totalSize += new FileInfo(audioFile).Length;
+                        totalSize += FileSystemUtility.GetFileSize(audioFile);
                     }
                 }
                 
-                if (configuration.MuxSubtitle) {
-                    subtitleFiles.AddRange(EnumerateFiles($"{fileNameWithoutExtension}*{Settings.SubtitleFileExtension}", directory, SearchOption.TopDirectoryOnly));
+                if (_muxingConfiguration.MuxSubtitle) {
+                    string filePattern = $"{fileNameWithoutExtension}*{Settings.SubtitleFileExtension}";
+                    subtitleFiles.AddRange(FileSystemUtility.EnumerateFiles(filePattern, directory, SearchOption.TopDirectoryOnly));
                 }
 
-                if (!File.Exists(chapterFile) || !configuration.MuxChapter) {
+                if (!File.Exists(chapterFile) || !_muxingConfiguration.MuxChapter) {
                     chapterFile = null;
                 }
 
                 Episode ep = new Episode() {
                     VideoFile = videoFile,
-                    VideoFps = configuration.VideoFps,
+                    VideoFps = _muxingConfiguration.VideoFps,
                     OutputFile = outputFile,
-                    OutputFileType = configuration.OutputType,
+                    OutputFileType = _muxingConfiguration.OutputType,
                     ChapterFile = chapterFile,
                     AudioFiles = audioFiles,
-                    AudioLanguage = configuration.AudioLanguage,
+                    AudioLanguage = _muxingConfiguration.AudioLanguage,
                     SubtitleFiles = subtitleFiles,
-                    SubtitleLanguage = configuration.SubtitleLanguage,
+                    SubtitleLanguage = _muxingConfiguration.SubtitleLanguage,
                     TaskId = Guid.NewGuid(),
                     TotalFileSize = totalSize
                 };

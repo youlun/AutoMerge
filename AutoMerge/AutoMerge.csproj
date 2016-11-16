@@ -84,9 +84,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="ProcessUtility.cs" />
+    <Compile Include="Utility\FileSystemUtility.cs" />
+    <Compile Include="Utility\ProcessUtility.cs" />
     <Compile Include="Settings.cs" />
-    <Compile Include="Utility.cs" />
+    <Compile Include="Utility\MessageBoxUtility.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

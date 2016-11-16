@@ -129,7 +129,7 @@ namespace AutoMerge
                     filePathProperty.SetValue(null, newFilePath);
 
                     if (string.IsNullOrEmpty(newFilePath)) {
-                        if (Utility.ShowQuestionMessageBox($"不使用 {task.Item3} 封装功能？", "确认")) {
+                        if (MessageBoxUtility.ShowQuestionMessageBox($"不使用 {task.Item3} 封装功能？", "确认")) {
                             filePathProperty.SetValue(null, string.Empty);
                             OutputFileTypes.Remove(task.Item4);
                             break;
@@ -137,7 +137,7 @@ namespace AutoMerge
                         continue;
                     }
 
-                    if (!Utility.ShowQuestionMessageBox($"确定选对了？选错了可不好改哟\r\n{newFilePath}", "确认")) {
+                    if (!MessageBoxUtility.ShowQuestionMessageBox($"确定选对了？选错了可不好改哟\r\n{newFilePath}", "确认")) {
                         filePathProperty.SetValue(null, string.Empty);
                         continue;
                     }
