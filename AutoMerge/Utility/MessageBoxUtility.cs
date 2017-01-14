@@ -7,7 +7,7 @@ using System.Windows;
 
 namespace AutoMerge
 {
-    internal static class Utility
+    internal static class MessageBoxUtility
     {
         internal static bool ShowQuestionMessageBox(
             string messageBoxText,
