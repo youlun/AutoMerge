@@ -63,7 +63,6 @@ namespace AutoMerge
                     }
 
                     Console.WriteLine($"{mainProcess} {args}\n");
-
                     taskStartedCallback(taskId);
                     ProcessUtility.StartProcess(mainProcess, args, true, true, true, () => {
                         taskStartedCallback(taskId);
