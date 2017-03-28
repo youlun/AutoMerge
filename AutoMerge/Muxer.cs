@@ -125,7 +125,7 @@ namespace AutoMerge
                 if (!File.Exists(videoFile)) continue;
 
                 var existingOutputFiles = FileSystemUtility.EnumerateFiles($@"{fileNameWithoutExtension} [*].mkv", directory, SearchOption.TopDirectoryOnly);
-                if (1 == existingOutputFiles.Count && Regex.IsMatch(existingOutputFiles[0], baseName.Replace("\\", "\\\\") + @" \[[0-9a-fA-F]{8}\]\.mkv")) {
+                if (1 == existingOutputFiles.Count && Regex.IsMatch(existingOutputFiles[0], Regex.Escape(baseName) + @" \[[0-9a-fA-F]{8}\]\.mkv")) {
                     continue;
                 }
 
