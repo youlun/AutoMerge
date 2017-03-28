@@ -163,8 +163,8 @@ namespace AutoMerge
             btn.VerticalAlignment = VerticalAlignment.Center;
 
             if (fileType.NeedEnterFps) {
-                btn.Checked += (s, e) => { videoFpsInput.IsEnabled = true; };
-                btn.Unchecked += (s, e) => { videoFpsInput.IsEnabled = false; };
+                btn.Checked += (s, e) => { videoFpsInput.IsEnabled = true; autoDetectVideoFpsSelector.IsEnabled = true; };
+                btn.Unchecked += (s, e) => { videoFpsInput.IsEnabled = false; autoDetectVideoFpsSelector.IsEnabled = false; };
             }
             if (fileType.UIBaseCheckBox != null) {
                 btn.Checked += (s, e) => { (FindName(fileType.UIBaseCheckBox) as CheckBox).IsChecked = true; };
@@ -309,6 +309,18 @@ namespace AutoMerge
             } else {
                 audioSourceSelector.Unchecked -= ForceChecked;
             }
+        }
+
+        private void autoDetectVideoFpsSelector_Checked(object sender, RoutedEventArgs e)
+        {
+            videoFpsInput.IsEnabled = false;
+            videoFpsInput.Text = "AUTO";
+        }
+
+        private void autoDetectVideoFpsSelector_UnChecked(object sender, RoutedEventArgs e)
+        {
+            videoFpsInput.IsEnabled = false;
+            videoFpsInput.Text = "24000/1001";
         }
     }
 }

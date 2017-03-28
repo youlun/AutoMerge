@@ -40,6 +40,7 @@
                                 <Grid>
                                     <TextBlock HorizontalAlignment="Left" Margin="30,32,0,0" TextWrapping="Wrap" Text="FPS" VerticalAlignment="Top"/>
                                     <TextBox x:Name="videoFpsInput" IsEnabled="False" HorizontalAlignment="Left" Margin="80,29,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="80" Text="24000/1001" Height="22"/>
+                                    <CheckBox x:Name="autoDetectVideoFpsSelector" IsEnabled="False" HorizontalAlignment="Left" VerticalAlignment="Center" Height="22" Margin="170,32,0,0" Content="自动检测" Checked="autoDetectVideoFpsSelector_Checked" Unchecked="autoDetectVideoFpsSelector_UnChecked"/>
                                 </Grid>
                             </Grid>
                         </GroupBox>

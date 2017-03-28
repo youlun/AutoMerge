@@ -153,9 +153,19 @@ namespace AutoMerge
                     chapterFile = null;
                 }
 
+                string videoFps = _muxingConfiguration.VideoFps;
+
+                if ("AUTO" == videoFps) {
+                    var info = new MediaInfo.DotNetWrapper.MediaInfo();
+                    info.Open(videoFile);
+                    var num = info.Get(MediaInfo.DotNetWrapper.StreamKind.Video, 0, "FrameRate_Num");
+                    var den = info.Get(MediaInfo.DotNetWrapper.StreamKind.Video, 0, "FrameRate_Den");
+                    videoFps = $"{num}/{den}";
+                }
+
                 Episode ep = new Episode() {
                     VideoFile = videoFile,
-                    VideoFps = _muxingConfiguration.VideoFps,
+                    VideoFps = videoFps,
                     OutputFile = outputFile,
                     OutputFileType = _muxingConfiguration.OutputType,
                     ChapterFile = chapterFile,
