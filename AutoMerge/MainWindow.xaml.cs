@@ -163,8 +163,12 @@ namespace AutoMerge
             btn.VerticalAlignment = VerticalAlignment.Center;
 
             if (fileType.NeedEnterFps) {
-                btn.Checked += (s, e) => { videoFpsInput.IsEnabled = true; autoDetectVideoFpsSelector.IsEnabled = true; };
-                btn.Unchecked += (s, e) => { videoFpsInput.IsEnabled = false; autoDetectVideoFpsSelector.IsEnabled = false; };
+                RoutedEventHandler checkChanged = (o, e) => {
+                    autoDetectVideoFpsSelector.IsEnabled = true;
+                    videoFpsInput.IsEnabled = btn.IsEnabled && !autoDetectVideoFpsSelector.IsChecked.GetValueOrDefault();
+                };
+                btn.Checked += checkChanged;
+                btn.Unchecked += checkChanged;
             }
             if (fileType.UIBaseCheckBox != null) {
                 btn.Checked += (s, e) => { (FindName(fileType.UIBaseCheckBox) as CheckBox).IsChecked = true; };
@@ -319,7 +323,7 @@ namespace AutoMerge
 
         private void autoDetectVideoFpsSelector_UnChecked(object sender, RoutedEventArgs e)
         {
-            videoFpsInput.IsEnabled = false;
+            videoFpsInput.IsEnabled = true;
             videoFpsInput.Text = "24000/1001";
         }
     }
