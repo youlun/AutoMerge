@@ -5,12 +5,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:AutoMerge"
         mc:Ignorable="d"
-        Title="(半)自动封装" Height="300" Width="450" WindowStartupLocation="CenterScreen" Loaded="Window_Loaded">
+        Title="(半)自动封装" Height="335" Width="450" WindowStartupLocation="CenterScreen" Loaded="Window_Loaded">
     <Grid>
         <DockPanel LastChildFill="True">
             <TabControl x:Name="tabControl" >
                 <TabItem Header="封装">
-                    <Grid Margin="0,0,0,0" Width="439" Height="246">
+                    <Grid Margin="0,0,0,0" Width="439" Height="246" VerticalAlignment="Top">
                         <GroupBox Header="输入" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="414">
                             <Grid>
                                 <Grid>
@@ -31,7 +31,7 @@
                                 </Grid>
                             </Grid>
                         </GroupBox>
-                        <GroupBox Header="输出" HorizontalAlignment="Left" Margin="10,125,0,0" VerticalAlignment="Top" Width="414">
+                        <GroupBox Header="输出" HorizontalAlignment="Left" Margin="10,125,0,0" VerticalAlignment="Top" Width="414" Height="108">
                             <Grid>
                                 <Grid>
                                     <TextBlock HorizontalAlignment="Left" Margin="30,10,0,0" TextWrapping="Wrap" Text="格式" VerticalAlignment="Top"/>
@@ -40,11 +40,13 @@
                                 <Grid>
                                     <TextBlock HorizontalAlignment="Left" Margin="30,32,0,0" TextWrapping="Wrap" Text="FPS" VerticalAlignment="Top"/>
                                     <TextBox x:Name="videoFpsInput" IsEnabled="False" HorizontalAlignment="Left" Margin="80,29,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="80" Text="24000/1001" Height="22"/>
-                                    <CheckBox x:Name="autoDetectVideoFpsSelector" IsEnabled="False" HorizontalAlignment="Left" VerticalAlignment="Center" Height="22" Margin="170,32,0,0" Content="自动检测" Checked="autoDetectVideoFpsSelector_Checked" Unchecked="autoDetectVideoFpsSelector_UnChecked"/>
+                                    <CheckBox x:Name="autoDetectVideoFpsSelector" IsEnabled="False" HorizontalAlignment="Left" VerticalAlignment="Center" Height="22" Margin="165,32,0,32" Content="自动检测" Checked="autoDetectVideoFpsSelector_Checked" Unchecked="autoDetectVideoFpsSelector_UnChecked"/>
+                                    <CheckBox x:Name="putCrc32ToFilenameSelector" HorizontalAlignment="Left" VerticalAlignment="Center" Height="22" Margin="10,56,0,8" Content="计算成品CRC32并加入文件名" IsChecked="True"/>
+                                    <CheckBox x:Name="moveToCompletedFolderSelector" HorizontalAlignment="Left" VerticalAlignment="Center" Height="22" Margin="193,56,0,8" Content="将成品移入completed目录" IsChecked="True"/>
                                 </Grid>
                             </Grid>
                         </GroupBox>
-                        <Button x:Name="startButton" Content="开始封装" HorizontalAlignment="Left" Margin="10,201,0,0" VerticalAlignment="Top" Width="414" Height="25" Click="startButton_Click"/>
+                        <Button x:Name="startButton" Content="开始封装" HorizontalAlignment="Left" Margin="10,238,0,-17" VerticalAlignment="Top" Width="414" Height="25" Click="startButton_Click"/>
                     </Grid>
                 </TabItem>
                 <TabItem x:Name="taskProgressPage" Header="进度">

@@ -87,13 +87,13 @@ namespace AutoMerge
             audioSourcePanel.Children.Add(audioLanguageInput);
         }
 
-        private void UpdateTaskProgress(Guid taskId, int progress)
+        private void UpdateTaskProgress(Guid taskId, int progress, string statusText)
         {
             lock (_taskList) {
                 foreach (var task in _taskList) {
                     if (task.TaskId != taskId) continue;
                     task.Percent = progress;
-                    task.StatusText = "进行中";
+                    task.StatusText = statusText;
                 }
             }
         }
@@ -283,7 +283,8 @@ namespace AutoMerge
                 VideoSourceType = videoType.Value
             });
 
-            muxer.StartMux(MuxingFileListBuilt, MuxingTaskStarted, UpdateTaskProgress, RemoveTask, MuxingTasksCompleted);
+            muxer.StartMux(MuxingFileListBuilt, MuxingTaskStarted, UpdateTaskProgress, RemoveTask, MuxingTasksCompleted,
+                putCrc32ToFilenameSelector.IsChecked.GetValueOrDefault(), moveToCompletedFolderSelector.IsChecked.GetValueOrDefault());
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)

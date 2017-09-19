@@ -40,9 +40,11 @@ namespace AutoMerge
         internal void StartMux(
             Action<List<Episode>> fileListBuiltCallback,
             Action<Guid> taskStartedCallback,
-            Action<Guid, int> taskProgressChangedCallback,
+            Action<Guid, int, string> taskProgressChangedCallback,
             Action<Guid> taskCompletedCallback,
-            Action allTaskCompletedCallback
+            Action allTaskCompletedCallback,
+            bool putCrc32ToFilename,
+            bool moveToCompletedFolder
         ) {
             string videoFileExtension = Settings.VideoSourceFileTypes[_muxingConfiguration.VideoSourceType].FileExtension;
             var videoFiles = FileSystemUtility.EnumerateFiles($"*{videoFileExtension}", _muxingConfiguration.MainDirectory);
@@ -53,11 +55,13 @@ namespace AutoMerge
             fileListBuiltCallback(episodes);
 
             new Thread(new ThreadStart(() => {
-                Parallel.ForEach(mergeParameters, parameter => {
-                    var outputType = parameter.Value.Item1;
-                    var taskId = parameter.Key;
-                    var args = parameter.Value.Item2;
-                    long totalFileSize = parameter.Value.Item3;
+                Parallel.ForEach(mergeParameters, new ParallelOptions { MaxDegreeOfParallelism =  1 }, parameter => {
+                    var episode = parameter.Value.Item2;
+
+                    OutputType outputType = episode.OutputFileType;
+                    Guid taskId = parameter.Key;
+                    string args = parameter.Value.Item1;
+                    long totalFileSize = episode.TotalFileSize;
 
                     string mainProcess = null;
                     switch (outputType) {
@@ -95,8 +99,47 @@ namespace AutoMerge
                                 break;
                         }
 
-                        taskProgressChangedCallback(taskId, progress);
+                        taskProgressChangedCallback(taskId, progress, "进行中");
                     }, () => {
+                        string file = episode.OutputFile;
+
+                        if (!File.Exists(file)) {
+                            taskCompletedCallback(taskId);
+                            return;
+                        }
+
+                        if (putCrc32ToFilename) {
+                            uint crc = 0;
+                            int progress = 0;
+                            long completedSize = 0, totalSize = 0;
+
+                            using (FileStream fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read, 16777216)) {
+                                byte[] buffer = new byte[16777216];
+                                totalSize = fs.Length;
+
+                                int n = 0;
+
+                                while ((n = fs.Read(buffer, 0, 16777216)) > 0) {
+                                    completedSize += n;
+                                    crc = Force.Crc32.Crc32Algorithm.Append(crc, buffer, 0, n);
+                                    progress = Convert.ToInt32(completedSize / totalSize * 100d);
+                                    taskProgressChangedCallback(taskId, progress, "校验中");
+                                }
+                            }
+
+                            string newName = $"{Path.GetDirectoryName(file)}\\{Path.GetFileNameWithoutExtension(file)} [{crc.ToString("X8")}]{Path.GetExtension(file)}";
+                            File.Move(file, newName);
+                            file = newName;
+                        }
+
+                        if (moveToCompletedFolder) {
+                            string curDir = _muxingConfiguration.MainDirectory;
+                            string newPath = $"{curDir}\\completed\\{file.Replace(curDir, "")}";
+                            string newDir = Path.GetDirectoryName(newPath);
+                            if (!Directory.Exists(newDir)) Directory.CreateDirectory(newDir);
+                            File.Move(file, newPath);
+                        }
+
                         taskCompletedCallback(taskId);
                     });
                 });
@@ -182,9 +225,9 @@ namespace AutoMerge
             return episodes;
         }
         
-        private Dictionary<Guid, Tuple<OutputType, string, long>> GenerateMergeParameters(List<Episode> episodes)
+        private Dictionary<Guid, Tuple<string, Episode>> GenerateMergeParameters(List<Episode> episodes)
         {
-            var mergeParameters = new Dictionary<Guid, Tuple<OutputType, string, long>>();
+            var mergeParameters = new Dictionary<Guid, Tuple<string, Episode>>();
 
             foreach (var ep in episodes) {
                 string parameter;
@@ -198,7 +241,7 @@ namespace AutoMerge
                     default:
                         continue;
                 }
-                mergeParameters.Add(ep.TaskId, Tuple.Create(ep.OutputFileType, parameter, ep.TotalFileSize));
+                mergeParameters.Add(ep.TaskId, Tuple.Create(parameter, ep));
             }
 
             return mergeParameters;
