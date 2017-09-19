@@ -55,7 +55,7 @@ namespace AutoMerge
             fileListBuiltCallback(episodes);
 
             new Thread(new ThreadStart(() => {
-                Parallel.ForEach(mergeParameters, new ParallelOptions { MaxDegreeOfParallelism =  1 }, parameter => {
+                Parallel.ForEach(mergeParameters, parameter => {
                     var episode = parameter.Value.Item2;
 
                     OutputType outputType = episode.OutputFileType;
