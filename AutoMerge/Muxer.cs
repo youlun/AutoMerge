@@ -26,6 +26,7 @@ namespace AutoMerge
             public string SubtitleLanguage { get; set; }
             public bool MuxChapter { get; set; }
             public bool MuxSubtitle { get; set; }
+            public string ChapterLanguage { get; set; }
         }
 
         private MuxingConfiguration _muxingConfiguration;
@@ -99,7 +100,7 @@ namespace AutoMerge
                                 break;
                         }
 
-                        taskProgressChangedCallback(taskId, progress, "进行中");
+                        taskProgressChangedCallback(taskId, progress, "封装中");
                     }, () => {
                         string file = episode.OutputFile;
 
@@ -122,7 +123,7 @@ namespace AutoMerge
                                 while ((n = fs.Read(buffer, 0, 16777216)) > 0) {
                                     completedSize += n;
                                     crc = Force.Crc32.Crc32Algorithm.Append(crc, buffer, 0, n);
-                                    progress = Convert.ToInt32(completedSize / totalSize * 100d);
+                                    progress = Convert.ToInt32(completedSize * 100d / totalSize);
                                     taskProgressChangedCallback(taskId, progress, "校验中");
                                 }
                             }
@@ -206,7 +207,7 @@ namespace AutoMerge
                     videoFps = $"{num}/{den}";
                 }
 
-                Episode ep = new Episode() {
+                Episode ep = new Episode {
                     VideoFile = videoFile,
                     VideoFps = videoFps,
                     OutputFile = outputFile,
@@ -217,7 +218,8 @@ namespace AutoMerge
                     SubtitleFiles = subtitleFiles,
                     SubtitleLanguage = _muxingConfiguration.SubtitleLanguage,
                     TaskId = Guid.NewGuid(),
-                    TotalFileSize = totalSize
+                    TotalFileSize = totalSize,
+                    ChapterLanguage = _muxingConfiguration.ChapterLanguage
                 };
                 episodes.Add(ep);
             }
@@ -273,6 +275,7 @@ namespace AutoMerge
 
             /* chapter */
             if (episode.ChapterFile != null) {
+                parameters.Add($"--chapter-language {episode.ChapterLanguage}");
                 parameters.Add($"--chapters \"{episode.ChapterFile}\"");
             }
 

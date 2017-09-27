@@ -56,6 +56,7 @@ namespace AutoMerge
         public ButtonType UIButtonType { get; set; } = ButtonType.Radio;
         public bool NeedEnterFps { get; set; } = false;
         public string UIBaseCheckBox { get; set; } = null;
+        public bool DefaultSelected { get; set; } = false;
     }
 
     class Episode
@@ -67,6 +68,7 @@ namespace AutoMerge
         public string ChapterFile { get; set; }
         public List<string> SubtitleFiles { get; set; }
         public string SubtitleLanguage { get; set; }
+        public string ChapterLanguage { get; set; }
 
         public OutputType OutputFileType { get; set; }
         public string OutputFile { get; set; }

@@ -18,18 +18,18 @@ namespace AutoMerge
         internal static Dictionary<VideoSourceType, FileType> VideoSourceFileTypes { get; } = new Dictionary<VideoSourceType, FileType>
         {
             { VideoSourceType.Avc, new FileType { FileExtension = ".264", UIBaseCheckBox = "videoSourceSelector" } },
-            { VideoSourceType.Hevc, new FileType { FileExtension = ".hevc", UIBaseCheckBox = "videoSourceSelector" } }
+            { VideoSourceType.Hevc, new FileType { FileExtension = ".hevc", UIBaseCheckBox = "videoSourceSelector", DefaultSelected = true } }
         };
         internal static Dictionary<AudioSourceType, FileType> AudioSourceFileTypes { get; } = new Dictionary<AudioSourceType, FileType>
         {
-            { AudioSourceType.Flac, new FileType { FileExtension = ".flac", UIButtonType = ButtonType.Check, UIBaseCheckBox = "audioSourceSelector" } },
-            { AudioSourceType.M4a, new FileType { FileExtension = ".m4a", UIButtonType = ButtonType.Check, UIBaseCheckBox = "audioSourceSelector" } },
-            { AudioSourceType.Aac, new FileType { FileExtension = ".aac", UIButtonType = ButtonType.Check, UIBaseCheckBox = "audioSourceSelector" } },
-            { AudioSourceType.Ac3, new FileType { FileExtension = ".ac3", UIButtonType = ButtonType.Check, UIBaseCheckBox = "audioSourceSelector" } }
+            { AudioSourceType.Flac, new FileType { FileExtension = ".flac", UIButtonType = ButtonType.Check, UIBaseCheckBox = "audioSourceSelector", DefaultSelected = true } },
+            { AudioSourceType.M4a, new FileType { FileExtension = ".m4a", UIButtonType = ButtonType.Check, UIBaseCheckBox = "audioSourceSelector", DefaultSelected = true } },
+            { AudioSourceType.Aac, new FileType { FileExtension = ".aac", UIButtonType = ButtonType.Check, UIBaseCheckBox = "audioSourceSelector", DefaultSelected = true } },
+            { AudioSourceType.Ac3, new FileType { FileExtension = ".ac3", UIButtonType = ButtonType.Check, UIBaseCheckBox = "audioSourceSelector", DefaultSelected = true } }
         };
         internal static Dictionary<OutputType, FileType> OutputFileTypes { get; set; } = new Dictionary<OutputType, FileType>
         {
-            { OutputType.Mkv, new FileType { FileExtension = ".mkv", NeedEnterFps = true } },
+            { OutputType.Mkv, new FileType { FileExtension = ".mkv", NeedEnterFps = true, DefaultSelected = true } },
             { OutputType.Mp4, new FileType { FileExtension = ".mp4", NeedEnterFps = true } }
         };
 

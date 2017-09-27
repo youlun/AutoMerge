@@ -165,6 +165,7 @@ namespace AutoMerge
             if (fileType.NeedEnterFps) {
                 RoutedEventHandler checkChanged = (o, e) => {
                     autoDetectVideoFpsSelector.IsEnabled = true;
+                    autoDetectVideoFpsSelector.IsChecked = true;
                     videoFpsInput.IsEnabled = btn.IsEnabled && !autoDetectVideoFpsSelector.IsChecked.GetValueOrDefault();
                 };
                 btn.Checked += checkChanged;
@@ -172,6 +173,11 @@ namespace AutoMerge
             }
             if (fileType.UIBaseCheckBox != null) {
                 btn.Checked += (s, e) => { (FindName(fileType.UIBaseCheckBox) as CheckBox).IsChecked = true; };
+            }
+
+            if (fileType.DefaultSelected)
+            {
+                btn.IsChecked = true;
             }
 
             parentPanel.Children.Add(btn);
@@ -280,7 +286,8 @@ namespace AutoMerge
                 OutputType = outputType.Value,
                 SubtitleLanguage = subtitleLanguageInput.Text,
                 VideoFps = videoFpsInput.Text,
-                VideoSourceType = videoType.Value
+                VideoSourceType = videoType.Value,
+                ChapterLanguage = chapterLanguageInput.Text
             });
 
             muxer.StartMux(MuxingFileListBuilt, MuxingTaskStarted, UpdateTaskProgress, RemoveTask, MuxingTasksCompleted,
