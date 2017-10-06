@@ -22,10 +22,18 @@ namespace AutoMerge
         };
         internal static Dictionary<AudioSourceType, FileType> AudioSourceFileTypes { get; } = new Dictionary<AudioSourceType, FileType>
         {
-            { AudioSourceType.Flac, new FileType { FileExtension = ".flac", UIButtonType = ButtonType.Check, UIBaseCheckBox = "audioSourceSelector", DefaultSelected = true } },
-            { AudioSourceType.M4a, new FileType { FileExtension = ".m4a", UIButtonType = ButtonType.Check, UIBaseCheckBox = "audioSourceSelector", DefaultSelected = true } },
-            { AudioSourceType.Aac, new FileType { FileExtension = ".aac", UIButtonType = ButtonType.Check, UIBaseCheckBox = "audioSourceSelector", DefaultSelected = true } },
-            { AudioSourceType.Ac3, new FileType { FileExtension = ".ac3", UIButtonType = ButtonType.Check, UIBaseCheckBox = "audioSourceSelector", DefaultSelected = true } }
+            { AudioSourceType.Flac, new FileType {
+                FileExtension = ".flac", SupportedOutputType = new OutputType[1] { OutputType.Mkv },
+                UIButtonType = ButtonType.Check, UIBaseCheckBox = "audioSourceSelector", DefaultSelected = true } },
+            { AudioSourceType.M4a, new FileType {
+                FileExtension = ".m4a", SupportedOutputType = new OutputType[2] { OutputType.Mkv, OutputType.Mp4 },
+                UIButtonType = ButtonType.Check, UIBaseCheckBox = "audioSourceSelector", DefaultSelected = true } },
+            { AudioSourceType.Aac, new FileType {
+                FileExtension = ".aac", SupportedOutputType = new OutputType[2] { OutputType.Mkv, OutputType.Mp4 },
+                UIButtonType = ButtonType.Check, UIBaseCheckBox = "audioSourceSelector", DefaultSelected = true } },
+            { AudioSourceType.Ac3, new FileType {
+                FileExtension = ".ac3", SupportedOutputType = new OutputType[1] { OutputType.Mkv },
+                UIButtonType = ButtonType.Check, UIBaseCheckBox = "audioSourceSelector", DefaultSelected = true } }
         };
         internal static Dictionary<OutputType, FileType> OutputFileTypes { get; set; } = new Dictionary<OutputType, FileType>
         {

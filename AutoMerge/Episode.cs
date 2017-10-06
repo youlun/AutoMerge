@@ -57,6 +57,7 @@ namespace AutoMerge
         public bool NeedEnterFps { get; set; } = false;
         public string UIBaseCheckBox { get; set; } = null;
         public bool DefaultSelected { get; set; } = false;
+        public OutputType[] SupportedOutputType { get; set; } = null;
     }
 
     class Episode

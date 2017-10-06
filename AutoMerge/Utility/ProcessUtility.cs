@@ -18,7 +18,8 @@ namespace AutoMerge.Utility
             Action processStarted = null,
             Action<string> outputDataReceived = null,
             Action processExited = null
-        ) {
+        )
+        {
             ProcessStartInfo psi = new ProcessStartInfo() {
                 FileName = filename,
                 Arguments = arguments,

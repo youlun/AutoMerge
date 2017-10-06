@@ -17,6 +17,8 @@ namespace AutoMerge
     public partial class MainWindow : Window
     {
 
+        private Dictionary<AudioSourceType, ToggleButton> _AudioSourceSelectors = new Dictionary<AudioSourceType, ToggleButton>();
+
         private TextBox audioLanguageInput = null;
         private CheckBox usingAllAudioSourceTypeSelector = null;
 
@@ -59,10 +61,27 @@ namespace AutoMerge
                 GenerateSelector(pair.Key, pair.Value, ref videoSourcePanel);
             }
             foreach (var pair in Settings.AudioSourceFileTypes) {
-                GenerateSelector(pair.Key, pair.Value, ref audioSourcePanel);
+                ToggleButton selector = GenerateSelector(pair.Key, pair.Value, ref audioSourcePanel);
+                _AudioSourceSelectors.Add(pair.Key, selector);
             }
             foreach (var pair in Settings.OutputFileTypes) {
                 GenerateSelector(pair.Key, pair.Value, ref outputPanel);
+            }
+
+            foreach (object item in outputPanel.Children) {
+                if (!(item is RadioButton)) continue;
+                (item as RadioButton).Checked += (o, e) => {
+                    OutputType outputType = (OutputType)((o as RadioButton).Tag);
+                    foreach (var kp in _AudioSourceSelectors) {
+                        if (Array.BinarySearch(Settings.AudioSourceFileTypes[kp.Key].SupportedOutputType, outputType) < 0) {
+                            kp.Value.IsEnabled = false;
+                            kp.Value.IsChecked = false;
+                        } else {
+                            kp.Value.IsEnabled = true;
+                            kp.Value.IsChecked = Settings.AudioSourceFileTypes[kp.Key].DefaultSelected;
+                        }
+                    }
+                };
             }
         }
 
@@ -149,13 +168,13 @@ namespace AutoMerge
             }), DispatcherPriority.Normal);
         }
 
-        private void GenerateSelector(object tag, FileType fileType, ref WrapPanel parentPanel)
+        private ToggleButton GenerateSelector(object tag, FileType fileType, ref WrapPanel parentPanel)
         {
             ToggleButton btn = null;
             switch (fileType.UIButtonType) {
                 case ButtonType.Check: btn = new CheckBox(); break;
                 case ButtonType.Radio: btn = new RadioButton(); break;
-                default: return;
+                default: return null;
             }
             btn.Content = fileType.UIDisplayName;
             btn.Tag = tag;
@@ -169,25 +188,25 @@ namespace AutoMerge
                     videoFpsInput.IsEnabled = btn.IsEnabled && !autoDetectVideoFpsSelector.IsChecked.GetValueOrDefault();
                 };
                 btn.Checked += checkChanged;
-                btn.Unchecked += checkChanged;
             }
             if (fileType.UIBaseCheckBox != null) {
                 btn.Checked += (s, e) => { (FindName(fileType.UIBaseCheckBox) as CheckBox).IsChecked = true; };
             }
 
-            if (fileType.DefaultSelected)
-            {
+            if (fileType.DefaultSelected) {
                 btn.IsChecked = true;
             }
 
             parentPanel.Children.Add(btn);
+
+            return btn;
         }
 
         private void EachSelectors(bool onlyOne, ref WrapPanel panel, Action<object> configCallback)
         {
             foreach (var children in panel.Children) {
                 var btn = children as ToggleButton;
-                if (null == btn || !btn.IsChecked.GetValueOrDefault() || usingAllAudioSourceTypeSelector == btn) {
+                if (null == btn || !btn.IsEnabled || !btn.IsChecked.GetValueOrDefault() || usingAllAudioSourceTypeSelector == btn) {
                     continue;
                 }
                 configCallback(btn.Tag);
@@ -305,7 +324,7 @@ namespace AutoMerge
 
             foreach (var element in audioSourcePanel.Children) {
                 CheckBox chk = element as CheckBox;
-                if (null == chk || usingAllAudioSourceTypeSelector == chk) continue;
+                if (null == chk || usingAllAudioSourceTypeSelector == chk || !chk.IsEnabled) continue;
 
                 if (selectorChecked) {
                     chk.Unchecked += ForceChecked;
