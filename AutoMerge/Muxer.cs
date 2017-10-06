@@ -158,7 +158,8 @@ namespace AutoMerge
 
                 long totalSize = 0;
 
-                string outputFile = baseName + Settings.OutputFileTypes[_muxingConfiguration.OutputType].FileExtension;
+                string outputFileExtension = Settings.OutputFileTypes[_muxingConfiguration.OutputType].FileExtension;
+                string outputFile = baseName + outputFileExtension;
                 string videoFile = file;
                 string chapterFile = baseName + Settings.ChapterFileExtension;
                 var audioFiles = new List<string>();
@@ -167,7 +168,7 @@ namespace AutoMerge
                 if (File.Exists(outputFile)) continue;
                 if (!File.Exists(videoFile)) continue;
 
-                var existingOutputFiles = FileSystemUtility.EnumerateFiles($@"{fileNameWithoutExtension} [*].mkv", directory, SearchOption.TopDirectoryOnly);
+                var existingOutputFiles = FileSystemUtility.EnumerateFiles($@"{fileNameWithoutExtension} [*]{outputFileExtension}", directory, SearchOption.TopDirectoryOnly);
                 if (1 == existingOutputFiles.Count && Regex.IsMatch(existingOutputFiles[0], Regex.Escape(baseName) + @" \[[0-9a-fA-F]{8}\]\.mkv")) {
                     continue;
                 }
