@@ -296,14 +296,14 @@ namespace AutoMerge
 
             /* global options */
             parameters.Add("--file-format mp4");
-            parameters.Add($"-o {episode.OutputFile}");
+            parameters.Add($"-o \"{episode.OutputFile}\"");
 
             /* video track */
-            parameters.Add($"-i {episode.VideoFile}?fps={episode.VideoFps}");
+            parameters.Add($"-i \"{episode.VideoFile}?fps={episode.VideoFps}\"");
 
             /* audio track */
             foreach (var audioFile in episode.AudioFiles) {
-                parameters.Add($"-i {audioFile}?language={episode.AudioLanguage}");
+                parameters.Add($"-i \"{audioFile}?language={episode.AudioLanguage}\"");
             }
 
             /* chapter */
