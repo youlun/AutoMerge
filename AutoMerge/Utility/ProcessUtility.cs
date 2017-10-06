@@ -51,8 +51,7 @@ namespace AutoMerge.Utility
             p.BeginErrorReadLine();
             processStarted();
 
-            if (waitForExit)
-                p.WaitForExit();
+            if (waitForExit) p.WaitForExit();
         }
     }
 }

@@ -26,7 +26,6 @@ namespace AutoMerge
             public string SubtitleLanguage { get; set; }
             public bool MuxChapter { get; set; }
             public bool MuxSubtitle { get; set; }
-            public string ChapterLanguage { get; set; }
         }
 
         private MuxingConfiguration _muxingConfiguration;
@@ -193,8 +192,18 @@ namespace AutoMerge
                     subtitleFiles.AddRange(FileSystemUtility.EnumerateFiles(filePattern, directory, SearchOption.TopDirectoryOnly));
                 }
 
+                string chapterLanguage = "eng";
+
                 if (!File.Exists(chapterFile) || !_muxingConfiguration.MuxChapter) {
                     chapterFile = null;
+                } else {
+                    string chapterFileContent = null;
+                    using (var sr = new StreamReader(chapterFile, Encoding.UTF8)) {
+                        chapterFileContent = sr.ReadToEnd();
+                    }
+                    if (Regex.IsMatch(chapterFileContent, @"[\u3041-\u30ff]")) {
+                        chapterLanguage = "jpn";
+                    }
                 }
 
                 string videoFps = _muxingConfiguration.VideoFps;
@@ -219,7 +228,7 @@ namespace AutoMerge
                     SubtitleLanguage = _muxingConfiguration.SubtitleLanguage,
                     TaskId = Guid.NewGuid(),
                     TotalFileSize = totalSize,
-                    ChapterLanguage = _muxingConfiguration.ChapterLanguage
+                    ChapterLanguage = chapterLanguage
                 };
                 episodes.Add(ep);
             }

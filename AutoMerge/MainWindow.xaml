@@ -23,8 +23,7 @@
                                 </Grid>
                                 <Grid>
                                     <CheckBox x:Name="chapterSelector" Content="章节" HorizontalAlignment="Left" Margin="10,54,0,0" VerticalAlignment="Top" IsChecked="True" />
-                                    <TextBlock HorizontalAlignment="Left" Margin="80,53,0,0" TextWrapping="Wrap" Text="语言" VerticalAlignment="Top"/>
-                                    <TextBox x:Name="chapterLanguageInput" HorizontalAlignment="Left" Margin="109,52,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="30" Text="jpn" Height="20"/>
+                                    <TextBlock HorizontalAlignment="Left" Margin="80,53,0,0" TextWrapping="Wrap" Text="语言: 仅适用于mkv, 自动设置(默认eng/检测到假名时jpn)" VerticalAlignment="Top"/>
                                 </Grid>
                                 <Grid>
                                     <CheckBox x:Name="subtitleSelector" Content="字幕" HorizontalAlignment="Left" Margin="10,76,0,0" VerticalAlignment="Top" IsChecked="True" />

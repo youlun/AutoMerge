@@ -286,8 +286,7 @@ namespace AutoMerge
                 OutputType = outputType.Value,
                 SubtitleLanguage = subtitleLanguageInput.Text,
                 VideoFps = videoFpsInput.Text,
-                VideoSourceType = videoType.Value,
-                ChapterLanguage = chapterLanguageInput.Text
+                VideoSourceType = videoType.Value
             });
 
             muxer.StartMux(MuxingFileListBuilt, MuxingTaskStarted, UpdateTaskProgress, RemoveTask, MuxingTasksCompleted,
