@@ -11,6 +11,7 @@ namespace AutoMerge.Utility
     {
         internal static List<string> EnumerateFiles(string filePattern, string directory = null, SearchOption searchOption = SearchOption.AllDirectories)
         {
+            if (!Directory.Exists(directory)) return new List<string>();
             return Directory.EnumerateFiles(
                 (string.IsNullOrEmpty(directory) ? Directory.GetCurrentDirectory() : directory),
                 filePattern,

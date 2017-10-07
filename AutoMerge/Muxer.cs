@@ -48,7 +48,7 @@ namespace AutoMerge
         ) {
             string videoFileExtension = Settings.VideoSourceFileTypes[_muxingConfiguration.VideoSourceType].FileExtension;
             var videoFiles = FileSystemUtility.EnumerateFiles($"*{videoFileExtension}", _muxingConfiguration.MainDirectory);
-            var episodes = GenerateEpisodes(videoFiles);
+            var episodes = GenerateEpisodes(videoFiles, moveToCompletedFolder);
 
             var mergeParameters = GenerateMergeParameters(episodes);
 
@@ -147,7 +147,7 @@ namespace AutoMerge
             })).Start();
         }
 
-        private List<Episode> GenerateEpisodes(List<string> videoFiles)
+        private List<Episode> GenerateEpisodes(List<string> videoFiles, bool moveToCompletedFolder)
         {
             var episodes = new List<Episode>();
 
@@ -165,12 +165,23 @@ namespace AutoMerge
                 var audioFiles = new List<string>();
                 var subtitleFiles = new List<string>();
 
-                if (File.Exists(outputFile)) continue;
                 if (!File.Exists(videoFile)) continue;
-
+                
+                if (File.Exists(outputFile)) continue;
                 var existingOutputFiles = FileSystemUtility.EnumerateFiles($@"{fileNameWithoutExtension} [*]{outputFileExtension}", directory, SearchOption.TopDirectoryOnly);
                 if (1 == existingOutputFiles.Count && Regex.IsMatch(existingOutputFiles[0], Regex.Escape(baseName) + @" \[[0-9a-fA-F]{8}\]\.mkv")) {
                     continue;
+                }
+                if (moveToCompletedFolder) {
+                    string nonCrcFilename = outputFile.Replace(_muxingConfiguration.MainDirectory, _muxingConfiguration.MainDirectory + @"\completed");
+                    if (File.Exists(nonCrcFilename)) continue;
+
+                    string completedPath = directory.Replace(_muxingConfiguration.MainDirectory, _muxingConfiguration.MainDirectory + @"\completed");
+                    existingOutputFiles = FileSystemUtility.EnumerateFiles($@"{fileNameWithoutExtension} [*]{outputFileExtension}", completedPath, SearchOption.TopDirectoryOnly);
+                    string escaped = $@"{Regex.Escape(completedPath)}\\{fileNameWithoutExtension} \[[0-9a-fA-F]{{8}}\]\.mkv";
+                    if (1 == existingOutputFiles.Count && Regex.IsMatch(existingOutputFiles[0], escaped)) {
+                        continue;
+                    }
                 }
 
                 totalSize += FileSystemUtility.GetFileSize(videoFile);
